@@ -1,0 +1,14 @@
+dbConfig:
+  host: "mysql-service"
+  user: "root"
+  name: "tododb"
+
+backend:
+  image:
+    repository: "ocaltubitak/todo-kube-backend"
+    tag: "latest"
+
+frontend:
+  image:
+    repository: "ocaltubitak/todo-kube-frontend"
+    tag: "latest"

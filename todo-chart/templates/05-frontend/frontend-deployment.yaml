@@ -15,6 +15,6 @@ spec:
     spec:
       containers:
         - name: todo-frontend
-          image: ocaltubitak/todo-kube-frontend:v2
+          image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}"
           ports:
             - containerPort: 80
