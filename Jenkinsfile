@@ -40,12 +40,5 @@ pipeline {
                 }
             }
         }
-        
-        stage('Kubernetes\'e Dağıt') {
-            steps {
-                echo 'Adım 4: Yeni versiyon Kubernetes kümesine gönderiliyor...'
-                sh 'kubectl apply -f k8s/'
-            }
-        }
     }
 }
