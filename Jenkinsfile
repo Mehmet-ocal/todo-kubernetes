@@ -8,26 +8,29 @@ pipeline {
             }
         }
         
-        // YENİ EKLENEN ADIM: Gerçek Linux komutları çalıştırıyoruz!
-        stage('Sistem Kontrolü') {
+        stage('Docker İmajlarını Derle') {
             steps {
-                echo 'Proje dosyaları listeleniyor:'
-                sh 'ls -la'
+                echo 'Docker Daemon yetkisi test ediliyor...'
+                // Asıl yetki kontrolü bu komutla yapılır:
+                sh 'docker info'
                 
-                echo 'Docker kurulu mu diye bakıyoruz:'
-                sh 'docker --version || echo "Docker komutu henüz yetkilendirilmedi!"'
-            }
-        }
-        
-        stage('Docker İmajını Derle') {
-            steps {
-                echo 'Adım 3: İleride burada Docker imajı oluşturulacak...'
+                echo 'Backend imajı derleniyor...'
+                dir('backend') {
+                    // backend klasörüne girip derler
+                    sh 'docker build -t todo-backend:latest .'
+                }
+                
+                echo 'Frontend imajı derleniyor...'
+                dir('frontend') {
+                    // frontend klasörüne girip derler
+                    sh 'docker build -t todo-frontend:latest .'
+                }
             }
         }
         
         stage('Kubernetes\'e Dağıt') {
             steps {
-                echo 'Adım 4: İleride yeni versiyon Kubernetes kümesine gönderilecek!'
+                echo 'Adım 3: İleride yeni versiyon Kubernetes kümesine gönderilecek!'
             }
         }
     }
