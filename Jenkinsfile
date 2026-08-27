@@ -1,5 +1,10 @@
 pipeline {
     agent any
+    
+    // Çevresel değişkenlerimizi tanımlıyoruz
+    environment {
+        DOCKERHUB_USERNAME = "ocaltubitak" 
+    }
 
     stages {
         stage('Kodu Çek (Checkout)') {
@@ -10,27 +15,36 @@ pipeline {
         
         stage('Docker İmajlarını Derle') {
             steps {
-                echo 'Docker Daemon yetkisi test ediliyor...'
-                // Asıl yetki kontrolü bu komutla yapılır:
-                sh 'docker info'
-                
                 echo 'Backend imajı derleniyor...'
                 dir('backend') {
-                    // backend klasörüne girip derler
-                    sh 'docker build -t todo-backend:latest .'
+                    // İmaj ismini Docker Hub kullanıcı adınla etiketliyoruz
+                    sh "docker build -t ${DOCKERHUB_USERNAME}/todo-backend:latest ."
                 }
                 
                 echo 'Frontend imajı derleniyor...'
                 dir('frontend') {
-                    // frontend klasörüne girip derler
-                    sh 'docker build -t todo-frontend:latest .'
+                    sh "docker build -t ${DOCKERHUB_USERNAME}/todo-frontend:latest ."
+                }
+            }
+        }
+        
+        stage('Docker Hub\'a Gönder (Push)') {
+            steps {
+                echo 'Docker Hub\'a güvenli giriş yapılıyor ve imajlar gönderiliyor...'
+                // Jenkins kasasındaki şifreleri geçici olarak çıkarıp kullanıyoruz
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
+                    sh 'echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin'
+                    
+                    sh "docker push ${DOCKERHUB_USERNAME}/todo-backend:latest"
+                    sh "docker push ${DOCKERHUB_USERNAME}/todo-frontend:latest"
                 }
             }
         }
         
         stage('Kubernetes\'e Dağıt') {
             steps {
-                echo 'Adım 3: İleride yeni versiyon Kubernetes kümesine gönderilecek!'
+                echo 'Adım 4: Yeni versiyon Kubernetes kümesine gönderiliyor...'
+                sh 'kubectl apply -f k8s/'
             }
         }
     }
