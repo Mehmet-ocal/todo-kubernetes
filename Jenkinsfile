@@ -18,12 +18,12 @@ pipeline {
                 echo 'Backend imajı derleniyor...'
                 dir('backend') {
                     // İmaj ismini Docker Hub kullanıcı adınla etiketliyoruz
-                    sh "docker build -t ${DOCKERHUB_USERNAME}/todo-backend:latest ."
+                    sh "docker build -t ${DOCKERHUB_USERNAME}/todo-kube-backend:latest ."
                 }
                 
                 echo 'Frontend imajı derleniyor...'
                 dir('frontend') {
-                    sh "docker build -t ${DOCKERHUB_USERNAME}/todo-frontend:latest ."
+                    sh "docker build -t ${DOCKERHUB_USERNAME}/todo-kube-frontend:latest ."
                 }
             }
         }
@@ -35,8 +35,8 @@ pipeline {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
                     sh 'echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin'
                     
-                    sh "docker push ${DOCKERHUB_USERNAME}/todo-backend:latest"
-                    sh "docker push ${DOCKERHUB_USERNAME}/todo-frontend:latest"
+                    sh "docker push ${DOCKERHUB_USERNAME}/todo-kube-backend:latest"
+                    sh "docker push ${DOCKERHUB_USERNAME}/todo-kube-frontend:latest"
                 }
             }
         }
