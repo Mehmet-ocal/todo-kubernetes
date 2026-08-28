@@ -1,156 +1,985 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kubernetes To-Do App</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+
+    <title>Kubernetes To-Do</title>
+
     <style>
-        * { box-sizing: border-box; font-family: 'Poppins', sans-serif; margin: 0; padding: 0; }
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --border: #e2e8f0;
+            --text: #0f172a;
+            --muted: #64748b;
+            --success: #22c55e;
+            --danger: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family:
+                Inter,
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                sans-serif;
+
             min-height: 100vh;
+
+            background:
+                radial-gradient(circle at top left, #c7d2fe, transparent 35%),
+                radial-gradient(circle at bottom right, #ddd6fe, transparent 35%),
+                var(--background);
+
+            color: var(--text);
+
             display: flex;
-            align-items: center;
             justify-content: center;
-            padding: 20px;
+            align-items: flex-start;
+
+            padding: 60px 20px;
         }
-        .container {
-            background: white;
+
+        .app {
             width: 100%;
-            max-width: 450px;
-            padding: 30px;
-            border-radius: 16px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            max-width: 680px;
         }
-        h2 { text-align: center; color: #333; margin-bottom: 25px; font-weight: 600; }
-        .input-group { display: flex; gap: 10px; margin-bottom: 20px; }
-        input {
-            flex: 1;
-            padding: 12px 15px;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            outline: none;
+
+        .header {
+            margin-bottom: 24px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+
+            background: #eef2ff;
+            color: var(--primary-dark);
+
+            padding: 6px 12px;
+            border-radius: 999px;
+
+            font-size: 12px;
+            font-weight: 700;
+
+            margin-bottom: 12px;
+        }
+
+        h1 {
+            font-size: 34px;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: var(--muted);
             font-size: 14px;
-            transition: border-color 0.3s;
         }
-        input:focus { border-color: #667eea; }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            border-radius: 20px;
+
+            padding: 24px;
+
+            box-shadow:
+                0 20px 50px rgba(15, 23, 42, 0.08);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        #taskInput {
+            flex: 1;
+
+            border: 1px solid var(--border);
+            border-radius: 12px;
+
+            padding: 14px 16px;
+
+            font-size: 15px;
+            outline: none;
+
+            transition: 0.2s;
+        }
+
+        #taskInput:focus {
+            border-color: var(--primary);
+
+            box-shadow:
+                0 0 0 3px rgba(99, 102, 241, 0.12);
+        }
+
         button {
-            background: #667eea;
-            color: white;
-            border: none;
-            padding: 0 20px;
-            border-radius: 8px;
+            border: 0;
             cursor: pointer;
-            font-weight: 600;
-            transition: background 0.3s, transform 0.1s;
+            font-family: inherit;
         }
-        button:hover { background: #5a67d8; }
-        button:active { transform: scale(0.95); }
-        
-        ul { list-style: none; max-height: 300px; overflow-y: auto; padding-right: 5px; }
-        ul::-webkit-scrollbar { width: 5px; }
-        ul::-webkit-scrollbar-thumb { background: #cbd5e0; border-radius: 5px; }
-        
-        li {
-            background: #f7fafc;
-            margin-bottom: 10px;
-            padding: 15px;
+
+        .add-btn {
+            background: var(--primary);
+            color: white;
+
+            border-radius: 12px;
+
+            padding: 0 22px;
+
+            font-weight: 700;
+
+            transition: 0.2s;
+        }
+
+        .add-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .add-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .stats {
+            display: grid;
+
+            grid-template-columns:
+                repeat(3, 1fr);
+
+            gap: 10px;
+
+            margin-top: 20px;
+        }
+
+        .stat {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+
+            padding: 14px;
+
+            border-radius: 12px;
+        }
+
+        .stat-label {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .stat-value {
+            display: block;
+
+            font-size: 20px;
+            font-weight: 700;
+
+            margin-top: 3px;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            margin: 22px 0 14px;
+
+            gap: 12px;
+        }
+
+        .filters {
+            display: flex;
+            gap: 6px;
+        }
+
+        .filter-btn {
+            background: transparent;
+            color: var(--muted);
+
+            padding: 8px 11px;
+
             border-radius: 8px;
+
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .filter-btn.active {
+            background: #eef2ff;
+            color: var(--primary-dark);
+        }
+
+        .clear-btn {
+            background: transparent;
+            color: var(--danger);
+
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        #taskList {
+            list-style: none;
+
+            display: flex;
+            flex-direction: column;
+
+            gap: 9px;
+
+            max-height: 430px;
+            overflow-y: auto;
+        }
+
+        .task {
             display: flex;
             align-items: center;
-            color: #2d3748;
-            font-size: 14px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-            transition: transform 0.2s;
-            border-left: 4px solid #667eea;
+
+            gap: 12px;
+
+            padding: 14px;
+
+            border: 1px solid var(--border);
+            border-radius: 12px;
+
+            background: white;
+
+            transition: 0.2s;
         }
-        li:hover { transform: translateX(5px); }
-        .empty-state { text-align: center; color: #a0aec0; font-size: 14px; margin-top: 10px; font-style: italic; }
+
+        .task:hover {
+            border-color: #c7d2fe;
+
+            box-shadow:
+                0 5px 14px rgba(15, 23, 42, 0.05);
+        }
+
+        .task-checkbox {
+            width: 19px;
+            height: 19px;
+
+            cursor: pointer;
+
+            accent-color: var(--success);
+        }
+
+        .task-text {
+            flex: 1;
+
+            font-size: 14px;
+
+            word-break: break-word;
+        }
+
+        .task.completed .task-text {
+            color: #94a3b8;
+            text-decoration: line-through;
+        }
+
+        .status {
+            font-size: 10px;
+            font-weight: 700;
+
+            padding: 4px 8px;
+            border-radius: 999px;
+
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .task.completed .status {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .delete-btn {
+            width: 32px;
+            height: 32px;
+
+            border-radius: 8px;
+
+            background: #fef2f2;
+            color: var(--danger);
+
+            font-size: 16px;
+        }
+
+        .delete-btn:hover {
+            background: #fee2e2;
+        }
+
+        .empty-state {
+            text-align: center;
+
+            padding: 48px 15px;
+
+            color: var(--muted);
+        }
+
+        .empty-icon {
+            font-size: 36px;
+
+            display: block;
+
+            margin-bottom: 10px;
+        }
+
+        .error {
+            margin-top: 12px;
+
+            background: #fef2f2;
+            color: #991b1b;
+
+            padding: 10px 12px;
+
+            border-radius: 8px;
+
+            font-size: 13px;
+
+            display: none;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 30px 14px;
+            }
+
+            h1 {
+                font-size: 28px;
+            }
+
+            .input-group {
+                flex-direction: column;
+            }
+
+            .add-btn {
+                height: 45px;
+            }
+
+            .toolbar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
     </style>
 </head>
+
 <body>
-    <div class="container">
-        <h2>🚀 TO-DO APP</h2>
-        <div class="input-group">
-            <input type="text" id="taskInput" placeholder="Yeni bir görev yazın...">
-            <button onclick="addTask()" id="addBtn">Ekle</button>
+
+<div class="app">
+
+    <div class="header">
+
+        <div class="badge">
+            ☸ Kubernetes Demo
         </div>
-        <ul id="taskList"></ul>
+
+        <h1>Görevlerim</h1>
+
+        <p class="subtitle">
+            Kubernetes üzerinde çalışan basit bir mikroservis To-Do uygulaması.
+        </p>
+
     </div>
 
-    <script>
-        const input = document.getElementById('taskInput');
-        const btn = document.getElementById('addBtn');
 
-        // İşlevsellik 1: "Enter" tuşu ile görev ekleme
-        input.addEventListener("keypress", function(event) {
-            if (event.key === "Enter") {
-                event.preventDefault();
+    <div class="card">
+
+        <div class="input-group">
+
+            <input
+                id="taskInput"
+                type="text"
+                maxlength="255"
+                placeholder="Yeni bir görev ekle..."
+                autocomplete="off"
+            >
+
+            <button
+                id="addBtn"
+                class="add-btn"
+            >
+                + Ekle
+            </button>
+
+        </div>
+
+
+        <div
+            id="errorMessage"
+            class="error"
+        ></div>
+
+
+        <div class="stats">
+
+            <div class="stat">
+
+                <span class="stat-label">
+                    Toplam
+                </span>
+
+                <span
+                    id="totalCount"
+                    class="stat-value"
+                >
+                    0
+                </span>
+
+            </div>
+
+
+            <div class="stat">
+
+                <span class="stat-label">
+                    Bekleyen
+                </span>
+
+                <span
+                    id="pendingCount"
+                    class="stat-value"
+                >
+                    0
+                </span>
+
+            </div>
+
+
+            <div class="stat">
+
+                <span class="stat-label">
+                    Tamamlanan
+                </span>
+
+                <span
+                    id="completedCount"
+                    class="stat-value"
+                >
+                    0
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <div class="toolbar">
+
+            <div class="filters">
+
+                <button
+                    class="filter-btn active"
+                    data-filter="all"
+                >
+                    Tümü
+                </button>
+
+                <button
+                    class="filter-btn"
+                    data-filter="pending"
+                >
+                    Bekleyen
+                </button>
+
+                <button
+                    class="filter-btn"
+                    data-filter="completed"
+                >
+                    Tamamlanan
+                </button>
+
+            </div>
+
+
+            <button
+                id="clearCompleted"
+                class="clear-btn"
+            >
+                Tamamlananları temizle
+            </button>
+
+        </div>
+
+
+        <ul id="taskList"></ul>
+
+    </div>
+
+</div>
+
+
+<script>
+
+    const input =
+        document.getElementById('taskInput');
+
+    const addBtn =
+        document.getElementById('addBtn');
+
+    const taskList =
+        document.getElementById('taskList');
+
+    const errorMessage =
+        document.getElementById('errorMessage');
+
+
+    let tasks = [];
+
+    let activeFilter = 'all';
+
+
+    async function api(url, options = {}) {
+
+        const response =
+            await fetch(url, options);
+
+
+        if (!response.ok) {
+
+            let message =
+                'Bir hata oluştu.';
+
+
+            try {
+
+                const data =
+                    await response.json();
+
+                message =
+                    data.message || message;
+
+            } catch (_) {}
+
+
+            throw new Error(message);
+        }
+
+
+        return response.json();
+    }
+
+
+    function showError(message) {
+
+        errorMessage.textContent =
+            message;
+
+        errorMessage.style.display =
+            'block';
+
+
+        setTimeout(() => {
+
+            errorMessage.style.display =
+                'none';
+
+        }, 3000);
+    }
+
+
+    async function fetchTasks() {
+
+        try {
+
+            tasks =
+                await api('/api/todos');
+
+            renderTasks();
+
+        } catch (error) {
+
+            showError(
+                'Görevler yüklenemedi.'
+            );
+
+        }
+    }
+
+
+    function renderTasks() {
+
+        taskList.innerHTML = '';
+
+
+        const normalizedTasks =
+            tasks.map(task => ({
+                ...task,
+                completed:
+                    Boolean(Number(task.completed))
+            }));
+
+
+        const filteredTasks =
+            normalizedTasks.filter(task => {
+
+                if (activeFilter === 'completed') {
+                    return task.completed;
+                }
+
+                if (activeFilter === 'pending') {
+                    return !task.completed;
+                }
+
+                return true;
+            });
+
+
+        updateStats(normalizedTasks);
+
+
+        if (filteredTasks.length === 0) {
+
+            const empty =
+                document.createElement('div');
+
+            empty.className =
+                'empty-state';
+
+
+            empty.innerHTML = `
+                <span class="empty-icon">
+                    📝
+                </span>
+
+                Burada gösterilecek görev bulunmuyor.
+            `;
+
+
+            taskList.appendChild(empty);
+
+            return;
+        }
+
+
+        filteredTasks.forEach(task => {
+
+            const li =
+                document.createElement('li');
+
+            li.className =
+                `task ${task.completed ? 'completed' : ''}`;
+
+
+            const checkbox =
+                document.createElement('input');
+
+            checkbox.type =
+                'checkbox';
+
+            checkbox.className =
+                'task-checkbox';
+
+            checkbox.checked =
+                task.completed;
+
+
+            checkbox.addEventListener(
+                'change',
+                () => updateTask(
+                    task.id,
+                    checkbox.checked
+                )
+            );
+
+
+            const text =
+                document.createElement('span');
+
+            text.className =
+                'task-text';
+
+            // Kullanıcı girdisini HTML olarak değil,
+            // sadece metin olarak gösteriyoruz.
+            text.textContent =
+                task.task;
+
+
+            const status =
+                document.createElement('span');
+
+            status.className =
+                'status';
+
+            status.textContent =
+                task.completed
+                    ? 'Tamamlandı'
+                    : 'Bekliyor';
+
+
+            const deleteBtn =
+                document.createElement('button');
+
+            deleteBtn.className =
+                'delete-btn';
+
+            deleteBtn.textContent =
+                '×';
+
+            deleteBtn.title =
+                'Görevi sil';
+
+
+            deleteBtn.addEventListener(
+                'click',
+                () => deleteTask(task.id)
+            );
+
+
+            li.append(
+                checkbox,
+                text,
+                status,
+                deleteBtn
+            );
+
+
+            taskList.appendChild(li);
+        });
+    }
+
+
+    function updateStats(list) {
+
+        const completed =
+            list.filter(
+                task => task.completed
+            ).length;
+
+
+        document.getElementById(
+            'totalCount'
+        ).textContent =
+            list.length;
+
+
+        document.getElementById(
+            'completedCount'
+        ).textContent =
+            completed;
+
+
+        document.getElementById(
+            'pendingCount'
+        ).textContent =
+            list.length - completed;
+    }
+
+
+    async function addTask() {
+
+        const task =
+            input.value.trim();
+
+
+        if (!task) {
+            return;
+        }
+
+
+        addBtn.disabled =
+            true;
+
+        addBtn.textContent =
+            'Ekleniyor...';
+
+
+        try {
+
+            await api('/api/todos', {
+
+                method: 'POST',
+
+                headers: {
+                    'Content-Type':
+                        'application/json'
+                },
+
+                body: JSON.stringify({
+                    task
+                })
+
+            });
+
+
+            input.value = '';
+
+            await fetchTasks();
+
+            input.focus();
+
+        } catch (error) {
+
+            showError(error.message);
+
+        } finally {
+
+            addBtn.disabled =
+                false;
+
+            addBtn.textContent =
+                '+ Ekle';
+
+        }
+    }
+
+
+    async function updateTask(
+        id,
+        completed
+    ) {
+
+        try {
+
+            await api(
+                `/api/todos/${id}`,
+                {
+                    method: 'PATCH',
+
+                    headers: {
+                        'Content-Type':
+                            'application/json'
+                    },
+
+                    body: JSON.stringify({
+                        completed
+                    })
+                }
+            );
+
+
+            await fetchTasks();
+
+        } catch (error) {
+
+            showError(
+                'Görev güncellenemedi.'
+            );
+
+            await fetchTasks();
+        }
+    }
+
+
+    async function deleteTask(id) {
+
+        try {
+
+            await api(
+                `/api/todos/${id}`,
+                {
+                    method: 'DELETE'
+                }
+            );
+
+
+            await fetchTasks();
+
+        } catch (error) {
+
+            showError(
+                'Görev silinemedi.'
+            );
+
+        }
+    }
+
+
+    async function clearCompleted() {
+
+        try {
+
+            await api(
+                '/api/todos/completed',
+                {
+                    method: 'DELETE'
+                }
+            );
+
+
+            await fetchTasks();
+
+        } catch (error) {
+
+            showError(
+                'Tamamlanan görevler temizlenemedi.'
+            );
+
+        }
+    }
+
+
+    addBtn.addEventListener(
+        'click',
+        addTask
+    );
+
+
+    input.addEventListener(
+        'keydown',
+        event => {
+
+            if (event.key === 'Enter') {
                 addTask();
             }
+
+        }
+    );
+
+
+    document
+        .querySelectorAll('.filter-btn')
+        .forEach(button => {
+
+            button.addEventListener(
+                'click',
+                () => {
+
+                    document
+                        .querySelectorAll(
+                            '.filter-btn'
+                        )
+                        .forEach(btn =>
+                            btn.classList.remove(
+                                'active'
+                            )
+                        );
+
+
+                    button.classList.add(
+                        'active'
+                    );
+
+
+                    activeFilter =
+                        button.dataset.filter;
+
+
+                    renderTasks();
+                }
+            );
+
         });
 
-        function fetchTasks() {
-            fetch('/api/todos')
-                .then(res => res.json())
-                .then(data => {
-                    const list = document.getElementById('taskList');
-                    list.innerHTML = '';
-                    
-                    // İşlevsellik 2: Eğer liste boşsa kullanıcıya şık bir mesaj göster
-                    if (data.length === 0) {
-                        list.innerHTML = '<div class="empty-state">Henüz bir görev eklenmemiş. Hadi başlayalım!</div>';
-                        return;
-                    }
-                    
-                    data.forEach(item => {
-                        list.innerHTML += `
-                        <li>
-                            <span style="flex: 1;">${item.task}</span>
-                            <button style="background: #fc8181; padding: 5px 10px; font-size: 12px;" onclick="deleteTask(${item.id})">Sil</button>
-                        </li>`;
-                    });
-                })
-                .catch(err => console.error("Veri çekilemedi:", err));
-        }
 
-        function addTask() {
-            // İşlevsellik 3: Boşluk karakterlerini temizle ve boşsa ekleme yapma
-            const taskValue = input.value.trim();
-            if(!taskValue) return;
+    document
+        .getElementById('clearCompleted')
+        .addEventListener(
+            'click',
+            clearCompleted
+        );
 
-            // İşlevsellik 4: Yükleniyor durumu (Kullanıcıya geri bildirim)
-            const originalText = btn.innerText;
-            btn.innerText = '...';
-            btn.disabled = true;
 
-            fetch('/api/todos', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ task: taskValue })
-            }).then(() => {
-                input.value = '';
-                fetchTasks(); // Listeyi yenile
-            }).finally(() => {
-                // İşlem bitince butonu eski haline getir
-                btn.innerText = originalText;
-                btn.disabled = false;
-                input.focus();
-            });
-        }
+    fetchTasks();
 
-        // İşlevsellik 5: Görevi Silme (Veritabanından ve Ekrandan)
-        function deleteTask(id) {
-            fetch(`/api/todos/${id}`, {
-                method: 'DELETE'
-            }).then(() => {
-                fetchTasks(); // Silme işleminden sonra listeyi yenile
-            }).catch(err => console.error("Silinemedi:", err));
-        }
+</script>
 
-        // Sayfa açıldığında verileri getir
-        fetchTasks();
-    </script>
 </body>
+
 </html>

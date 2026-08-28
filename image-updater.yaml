@@ -7,7 +7,7 @@ metadata:
 
 spec:
   writeBackConfig:
-    method: "git:secret:git-creds"
+    method: "git:secret:argocd/git-creds"
 
     gitConfig:
       repository: "https://github.com/Mehmet-ocal/todo-kubernetes.git"

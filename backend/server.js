@@ -3,10 +3,11 @@ const mysql = require('mysql2');
 const cors = require('cors');
 
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 
-// 1. Veritabanı Bağlantısı (Kubernetes ConfigMap ve Secret'tan gelecek)
+// Veritabanı bağlantısı
 const db = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
@@ -17,8 +18,7 @@ const db = mysql.createPool({
     queueLimit: 0
 });
 
-// 2. Tabloyu Otomatik Oluştur
-// Veritabanı boşsa çökmemesi için kendi tablosunu kendi yaratır.
+// Tabloyu otomatik oluştur
 db.query(`
     CREATE TABLE IF NOT EXISTS todos (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -26,43 +26,211 @@ db.query(`
         completed BOOLEAN DEFAULT false
     )
 `, (err) => {
-    if (err) console.error("Tablo oluşturma hatası:", err);
-    else console.log("Todos tablosu hazır veya zaten mevcut.");
+    if (err) {
+        console.error('Tablo oluşturma hatası:', err);
+    } else {
+        console.log('Todos tablosu hazır.');
+    }
 });
 
-// 3. Yeni Görev Ekleme (POST)
-app.post('/api/todos', (req, res) => {
-    const { task } = req.body;
-    db.query('INSERT INTO todos (task) VALUES (?)', [task], (err, result) => {
-        if (err) return res.status(500).json(err);
-        res.status(201).json({ id: result.insertId, task, completed: false });
-    });
-});
 
-// 4. Görevleri Listeleme (GET)
-app.get('/api/todos', (req, res) => {
-    db.query('SELECT * FROM todos', (err, results) => {
-        if (err) return res.status(500).json(err);
-        res.json(results);
-    });
-});
+// ----------------------------------------------------
+// HEALTH CHECK
+// ----------------------------------------------------
 
-// İşlevsellik: Görev Silme (DELETE) Endpoint'i
-app.delete('/api/todos/:id', (req, res) => {
-    const { id } = req.params;
-    const query = "DELETE FROM todos WHERE id = ?"; // MySQL silme sorgusu
-    
-    db.query(query, [id], (err, result) => {
+app.get('/health', (req, res) => {
+    db.query('SELECT 1', (err) => {
         if (err) {
-            console.error("Silme hatası:", err);
-            return res.status(500).send(err);
+            return res.status(503).json({
+                status: 'error',
+                database: 'down'
+            });
         }
-        res.send({ message: "Görev başarıyla silindi!" });
+
+        res.json({
+            status: 'ok',
+            database: 'up'
+        });
     });
 });
 
-// Sunucuyu Başlat
+
+// ----------------------------------------------------
+// TÜM GÖREVLERİ GETİR
+// ----------------------------------------------------
+
+app.get('/api/todos', (req, res) => {
+    db.query(
+        'SELECT * FROM todos ORDER BY id DESC',
+        (err, results) => {
+            if (err) {
+                console.error('Listeleme hatası:', err);
+                return res.status(500).json({
+                    message: 'Görevler alınamadı.'
+                });
+            }
+
+            res.json(results);
+        }
+    );
+});
+
+
+// ----------------------------------------------------
+// YENİ GÖREV EKLE
+// ----------------------------------------------------
+
+app.post('/api/todos', (req, res) => {
+
+    const task = req.body.task?.trim();
+
+    if (!task) {
+        return res.status(400).json({
+            message: 'Görev boş olamaz.'
+        });
+    }
+
+    if (task.length > 255) {
+        return res.status(400).json({
+            message: 'Görev en fazla 255 karakter olabilir.'
+        });
+    }
+
+    db.query(
+        'INSERT INTO todos (task) VALUES (?)',
+        [task],
+        (err, result) => {
+
+            if (err) {
+                console.error('Ekleme hatası:', err);
+
+                return res.status(500).json({
+                    message: 'Görev eklenemedi.'
+                });
+            }
+
+            res.status(201).json({
+                id: result.insertId,
+                task,
+                completed: false
+            });
+        }
+    );
+});
+
+
+// ----------------------------------------------------
+// GÖREV DURUMUNU GÜNCELLE
+// ----------------------------------------------------
+
+app.patch('/api/todos/:id', (req, res) => {
+
+    const { id } = req.params;
+    const { completed } = req.body;
+
+    if (typeof completed !== 'boolean') {
+        return res.status(400).json({
+            message: 'completed alanı boolean olmalıdır.'
+        });
+    }
+
+    db.query(
+        'UPDATE todos SET completed = ? WHERE id = ?',
+        [completed, id],
+        (err, result) => {
+
+            if (err) {
+                console.error('Güncelleme hatası:', err);
+
+                return res.status(500).json({
+                    message: 'Görev güncellenemedi.'
+                });
+            }
+
+            if (result.affectedRows === 0) {
+                return res.status(404).json({
+                    message: 'Görev bulunamadı.'
+                });
+            }
+
+            res.json({
+                id: Number(id),
+                completed
+            });
+        }
+    );
+});
+
+
+// ----------------------------------------------------
+// TAMAMLANAN GÖREVLERİ TEMİZLE
+// Bu route /:id route'undan önce olmalı.
+// ----------------------------------------------------
+
+app.delete('/api/todos/completed', (req, res) => {
+
+    db.query(
+        'DELETE FROM todos WHERE completed = true',
+        (err, result) => {
+
+            if (err) {
+                console.error('Toplu silme hatası:', err);
+
+                return res.status(500).json({
+                    message: 'Tamamlanan görevler silinemedi.'
+                });
+            }
+
+            res.json({
+                message: 'Tamamlanan görevler temizlendi.',
+                deleted: result.affectedRows
+            });
+        }
+    );
+});
+
+
+// ----------------------------------------------------
+// TEK GÖREV SİL
+// ----------------------------------------------------
+
+app.delete('/api/todos/:id', (req, res) => {
+
+    const { id } = req.params;
+
+    db.query(
+        'DELETE FROM todos WHERE id = ?',
+        [id],
+        (err, result) => {
+
+            if (err) {
+                console.error('Silme hatası:', err);
+
+                return res.status(500).json({
+                    message: 'Görev silinemedi.'
+                });
+            }
+
+            if (result.affectedRows === 0) {
+                return res.status(404).json({
+                    message: 'Görev bulunamadı.'
+                });
+            }
+
+            res.json({
+                message: 'Görev başarıyla silindi.'
+            });
+        }
+    );
+});
+
+
+// ----------------------------------------------------
+// SERVER
+// ----------------------------------------------------
+
 const PORT = process.env.PORT || 8080;
+
 app.listen(PORT, () => {
     console.log(`Backend ${PORT} portunda çalışıyor.`);
 });
