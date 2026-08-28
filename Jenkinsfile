@@ -23,6 +23,12 @@ pipeline {
         }
 
         stage('Docker İmajlarını Derle') {
+             when {
+                anyOf {
+                    changeset "backend/**"
+                    changeset "frontend/**"
+                }
+            }
             steps {
 
                 echo "Backend imajı derleniyor: ${IMAGE_TAG}"
@@ -50,6 +56,13 @@ pipeline {
         }
 
         stage('Docker Hub\'a Gönder') {
+            when {
+                anyOf {
+                    changeset "backend/**"
+                    changeset "frontend/**"
+                }
+            }
+
             steps {
 
                 withCredentials([

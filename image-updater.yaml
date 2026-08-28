@@ -1,0 +1,43 @@
+apiVersion: argocd-image-updater.argoproj.io/v1alpha1
+kind: ImageUpdater
+
+metadata:
+  name: todo-image-updater
+  namespace: argocd
+
+spec:
+  writeBackConfig:
+    method: "git:secret:git-creds"
+
+    gitConfig:
+      repository: "https://github.com/Mehmet-ocal/todo-kubernetes.git"
+      branch: "main"
+      writeBackTarget: "helmvalues:./values.yaml"
+
+  applicationRefs:
+    - namePattern: "todo-app"
+
+      images:
+        - alias: "backend"
+          imageName: "ocaltubitak/todo-kube-backend:37dfda2"
+
+          commonUpdateSettings:
+            updateStrategy: "newest-build"
+            allowTags: "regexp:^[0-9a-f]{7}$"
+
+          manifestTargets:
+            helm:
+              name: "backend.image.repository"
+              tag: "backend.image.tag"
+
+        - alias: "frontend"
+          imageName: "ocaltubitak/todo-kube-frontend:37dfda2"
+
+          commonUpdateSettings:
+            updateStrategy: "newest-build"
+            allowTags: "regexp:^[0-9a-f]{7}$"
+
+          manifestTargets:
+            helm:
+              name: "frontend.image.repository"
+              tag: "frontend.image.tag"
