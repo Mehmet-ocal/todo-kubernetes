@@ -2,13 +2,11 @@ dbConfig:
   host: "mysql-service"
   user: "root"
   name: "tododb"
-
 backend:
   image:
     repository: "ocaltubitak/todo-kube-backend"
-    tag: "37dfda2"
-
+    tag: "6d6d3d1"
 frontend:
   image:
     repository: "ocaltubitak/todo-kube-frontend"
-    tag: "37dfda2"
+    tag: "6d6d3d1"
