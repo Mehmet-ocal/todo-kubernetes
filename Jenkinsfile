@@ -1,44 +1,85 @@
 pipeline {
     agent any
-    
-    // Çevresel değişkenlerimizi tanımlıyoruz
+
     environment {
-        DOCKERHUB_USERNAME = "ocaltubitak" 
+        DOCKERHUB_USERNAME = "ocaltubitak"
     }
 
     stages {
-        stage('Kodu Çek (Checkout)') {
+
+        stage('Kodu Hazırla') {
             steps {
-                echo 'Adım 1: Yeni kodlar GitHub deposundan başarıyla indirildi!'
+                script {
+                    // Jenkins zaten Git repository'yi checkout etmiş oluyor.
+                    // Burada mevcut commit'in kısa SHA değerini alıyoruz.
+                    env.IMAGE_TAG = sh(
+                        script: 'git rev-parse --short HEAD',
+                        returnStdout: true
+                    ).trim()
+
+                    echo "Bu build için image tag: ${env.IMAGE_TAG}"
+                }
             }
         }
-        
+
         stage('Docker İmajlarını Derle') {
             steps {
-                echo 'Backend imajı derleniyor...'
+
+                echo "Backend imajı derleniyor: ${IMAGE_TAG}"
+
                 dir('backend') {
-                    // İmaj ismini Docker Hub kullanıcı adınla etiketliyoruz
-                    sh "docker build -t ${DOCKERHUB_USERNAME}/todo-kube-backend:latest ."
+                    sh """
+                        docker build \
+                        -t ${DOCKERHUB_USERNAME}/todo-kube-backend:${IMAGE_TAG} \
+                        -t ${DOCKERHUB_USERNAME}/todo-kube-backend:latest \
+                        .
+                    """
                 }
-                
-                echo 'Frontend imajı derleniyor...'
+
+                echo "Frontend imajı derleniyor: ${IMAGE_TAG}"
+
                 dir('frontend') {
-                    sh "docker build -t ${DOCKERHUB_USERNAME}/todo-kube-frontend:latest ."
+                    sh """
+                        docker build \
+                        -t ${DOCKERHUB_USERNAME}/todo-kube-frontend:${IMAGE_TAG} \
+                        -t ${DOCKERHUB_USERNAME}/todo-kube-frontend:latest \
+                        .
+                    """
                 }
             }
         }
-        
-        stage('Docker Hub\'a Gönder (Push)') {
+
+        stage('Docker Hub\'a Gönder') {
             steps {
-                echo 'Docker Hub\'a güvenli giriş yapılıyor ve imajlar gönderiliyor...'
-                // Jenkins kasasındaki şifreleri geçici olarak çıkarıp kullanıyoruz
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
-                    sh 'echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin'
-                    
+
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-credentials',
+                        passwordVariable: 'DOCKER_PASSWORD',
+                        usernameVariable: 'DOCKER_USERNAME'
+                    )
+                ]) {
+
+                    sh '''
+                        echo "$DOCKER_PASSWORD" | \
+                        docker login -u "$DOCKER_USERNAME" --password-stdin
+                    '''
+
+                    // SHA tag
+                    sh "docker push ${DOCKERHUB_USERNAME}/todo-kube-backend:${IMAGE_TAG}"
+                    sh "docker push ${DOCKERHUB_USERNAME}/todo-kube-frontend:${IMAGE_TAG}"
+
+                    // latest tag
                     sh "docker push ${DOCKERHUB_USERNAME}/todo-kube-backend:latest"
                     sh "docker push ${DOCKERHUB_USERNAME}/todo-kube-frontend:latest"
                 }
             }
+        }
+    }
+
+    post {
+        always {
+            sh 'docker logout || true'
         }
     }
 }
