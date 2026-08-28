@@ -5,8 +5,8 @@ dbConfig:
 backend:
   image:
     repository: "ocaltubitak/todo-kube-backend"
-    tag: "6d6d3d1"
+    tag: "04c8ccd"
 frontend:
   image:
     repository: "ocaltubitak/todo-kube-frontend"
-    tag: "6d6d3d1"
+    tag: "04c8ccd"
