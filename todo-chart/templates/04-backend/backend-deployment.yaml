@@ -1,26 +1,40 @@
 apiVersion: apps/v1
 kind: Deployment
+
 metadata:
   name: backend-deployment
   namespace: todo-app
+
 spec:
+  {{- if not .Values.backend.autoscaling.enabled }}
   replicas: 1
+  {{- end }}
+
   selector:
     matchLabels:
       app: todo-backend
+
   template:
     metadata:
       labels:
         app: todo-backend
+
     spec:
       containers:
         - name: backend
+
           image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}
+
           ports:
             - containerPort: 8080
+
           envFrom:
             - configMapRef:
                 name: todo-configmap
+
           env:
             - name: DB_PASSWORD
               valueFrom:
