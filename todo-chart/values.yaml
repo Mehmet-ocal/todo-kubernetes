@@ -5,7 +5,7 @@ dbConfig:
 backend:
   image:
     repository: "ocaltubitak/todo-kube-backend"
-    tag: "04c8ccd"
+    tag: "41cccbc"
   resources:
     requests:
       memory: "96Mi"
@@ -13,7 +13,6 @@ backend:
     limits:
       memory: "256Mi"
       cpu: "500m"
-
   autoscaling:
     enabled: true
     minReplicas: 1
@@ -22,4 +21,4 @@ backend:
 frontend:
   image:
     repository: "ocaltubitak/todo-kube-frontend"
-    tag: "04c8ccd"
+    tag: "41cccbc"
