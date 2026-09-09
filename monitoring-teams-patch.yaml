@@ -1,0 +1,73 @@
+spec:
+  source:
+    helm:
+      values: |
+        prometheusOperator:
+          admissionWebhooks:
+            enabled: false
+
+        grafana:
+          service:
+            type: NodePort
+            nodePort: 30300
+
+        prometheus:
+          service:
+            type: NodePort
+            nodePort: 30900
+
+        alertmanager:
+          service:
+            type: NodePort
+            nodePort: 30903
+
+          alertmanagerSpec:
+            secrets:
+              - alertmanager-teams-webhook
+
+          config:
+            route:
+              group_by:
+                - namespace
+                - alertname
+              group_wait: 10s
+              group_interval: 5m
+              repeat_interval: 12h
+              receiver: 'null'
+              routes:
+                - receiver: teams
+                  matchers:
+                    - alertname = "BackendHighMemoryUsage"
+
+                - receiver: 'null'
+                  matchers:
+                    - alertname = "Watchdog"
+
+            receivers:
+              - name: 'null'
+
+              - name: teams
+                msteamsv2_configs:
+                  - send_resolved: true
+                    webhook_url_file: /etc/alertmanager/secrets/alertmanager-teams-webhook/teams-webhook-url
+
+                    title: >-
+                      {{ if eq .Status "firing" }}🚨 Kubernetes Alarmı{{ else }}✅ Kubernetes Alarmı Çözüldü{{ end }} | {{ .CommonLabels.alertname }}
+
+                    text: |-
+                      **Durum:** {{ .Status | toUpper }}
+
+                      **Alarm:** {{ .CommonLabels.alertname }}
+
+                      **Namespace:** {{ .CommonLabels.namespace }}
+
+                      **Seviye:** {{ .CommonLabels.severity }}
+
+                      {{ range .Alerts }}
+                      **Pod:** {{ .Labels.pod }}
+
+                      **Özet:** {{ .Annotations.summary }}
+
+                      **Açıklama:** {{ .Annotations.description }}
+
+                      {{ end }}
