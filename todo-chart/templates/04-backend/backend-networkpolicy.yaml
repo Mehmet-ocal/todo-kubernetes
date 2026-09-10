@@ -14,10 +14,12 @@ spec:
 
   ingress:
     - from:
+        # NetworkPolicy görevi için izin verilen namespace
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: np-allow
 
+        # Gerçek uygulamanın frontend pod'u
         - podSelector:
             matchLabels:
               app: todo-frontend
