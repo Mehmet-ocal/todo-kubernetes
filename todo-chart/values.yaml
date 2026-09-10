@@ -5,7 +5,7 @@ dbConfig:
 backend:
   image:
     repository: "ocaltubitak/todo-kube-backend"
-    tag: "7710e8f"
+    tag: "b25e1dd"
   resources:
     requests:
       memory: "96Mi"
@@ -21,4 +21,4 @@ backend:
 frontend:
   image:
     repository: "ocaltubitak/todo-kube-frontend"
-    tag: "7710e8f"
+    tag: "b25e1dd"
