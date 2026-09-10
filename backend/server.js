@@ -35,20 +35,31 @@ db.query(`
 
 
 // ----------------------------------------------------
-// HEALTH CHECK
+// HEALTH CHECKS
 // ----------------------------------------------------
 
-app.get('/health', (req, res) => {
+// Liveness: Backend process çalışıyor mu?
+app.get('/health/live', (req, res) => {
+    res.status(200).json({
+        status: 'ok',
+        backend: 'up'
+    });
+});
+
+// Readiness: Backend + MySQL kullanıma hazır mı?
+app.get('/health/ready', (req, res) => {
     db.query('SELECT 1', (err) => {
         if (err) {
             return res.status(503).json({
                 status: 'error',
+                backend: 'up',
                 database: 'down'
             });
         }
 
-        res.json({
+        res.status(200).json({
             status: 'ok',
+            backend: 'up',
             database: 'up'
         });
     });
