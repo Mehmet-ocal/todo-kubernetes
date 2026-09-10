@@ -55,6 +55,75 @@ pipeline {
             }
         }
 
+        stage('Trivy Güvenlik Taraması') {
+            when {
+                anyOf {
+                    changeset "backend/**"
+                    changeset "frontend/**"
+                }
+            }
+
+            steps {
+                echo "Backend HIGH/CRITICAL açıkları raporlanıyor..."
+
+                sh """
+                    docker run --rm \
+                    -v /var/run/docker.sock:/var/run/docker.sock \
+                    -v trivy-cache:/root/.cache/ \
+                    aquasec/trivy:0.74.0 \
+                    image \
+                    --scanners vuln \
+                    --severity HIGH,CRITICAL \
+                    --exit-code 0 \
+                    ${DOCKERHUB_USERNAME}/todo-kube-backend:${IMAGE_TAG}
+                """
+
+                echo "Frontend HIGH/CRITICAL açıkları raporlanıyor..."
+
+                sh """
+                    docker run --rm \
+                    -v /var/run/docker.sock:/var/run/docker.sock \
+                    -v trivy-cache:/root/.cache/ \
+                    aquasec/trivy:0.74.0 \
+                    image \
+                    --scanners vuln \
+                    --severity HIGH,CRITICAL \
+                    --exit-code 0 \
+                    ${DOCKERHUB_USERNAME}/todo-kube-frontend:${IMAGE_TAG}
+                """
+
+                echo "Backend CRITICAL security gate kontrolü..."
+
+                sh """
+                    docker run --rm \
+                    -v /var/run/docker.sock:/var/run/docker.sock \
+                    -v trivy-cache:/root/.cache/ \
+                    aquasec/trivy:0.74.0 \
+                    image \
+                    --scanners vuln \
+                    --severity CRITICAL \
+                    --ignore-unfixed \
+                    --exit-code 1 \
+                    ${DOCKERHUB_USERNAME}/todo-kube-backend:${IMAGE_TAG}
+                """
+
+                echo "Frontend CRITICAL security gate kontrolü..."
+
+                sh """
+                    docker run --rm \
+                    -v /var/run/docker.sock:/var/run/docker.sock \
+                    -v trivy-cache:/root/.cache/ \
+                    aquasec/trivy:0.74.0 \
+                    image \
+                    --scanners vuln \
+                    --severity CRITICAL \
+                    --ignore-unfixed \
+                    --exit-code 1 \
+                    ${DOCKERHUB_USERNAME}/todo-kube-frontend:${IMAGE_TAG}
+                """
+            }
+        }
+
         stage('Docker Hub\'a Gönder') {
             when {
                 anyOf {
